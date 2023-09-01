@@ -11,7 +11,11 @@ def _parse_filename(filename):
     """
     Parse the filename into its components based on index.
     """
-    timestep, row, column, field, channel = filename[:3], filename[3], filename[4:6], filename[6:8], filename[8:10]
+    timestep = filename[:3]
+    row = filename[3]
+    column = filename[4:6]
+    field = filename[6:8]
+    channel = filename[8:10]
     return timestep, row, column, field, channel
 
 def _list_tif_files_recursively(data_dir):
@@ -29,11 +33,15 @@ def _list_tif_files_recursively(data_dir):
     return results
 
 class VideoDataset_tif(Dataset):
-    def __init__(self, resolution, video_paths, classes=None, shard=0, num_shards=1, rgb=True, seq_len=20):
+    def __init__(
+            self, resolution, video_paths, classes=None, shard=0, 
+            num_shards=1, rgb=True, seq_len=20):
         super().__init__()
         self.resolution = resolution
         self.local_videos = video_paths[shard:][::num_shards]
-        self.local_classes = None if classes is None else classes[shard:][::num_shards]
+        self.local_classes = None
+        if classes is not None:
+            self.local_classes = classes[shard:][::num_shards]
         self.rgb = rgb
         self.seq_len = seq_len
 
@@ -60,8 +68,9 @@ class VideoDataset_tif(Dataset):
                     tuple(x // 2 for x in frame.size), resample=Image.BOX
                 )
             scale = self.resolution / min(*frame.size)
-            frame =frame.resize(
-                tuple(round(x * scale) for x in frame.size), resample=Image.BICUBIC
+            frame = frame.resize(
+                tuple(round(x * scale) for x in frame.size),
+                resample=Image.BICUBIC
             )
 
             if self.rgb:
@@ -71,7 +80,8 @@ class VideoDataset_tif(Dataset):
                 arr = np.expand_dims(arr, axis=2)
             crop_y = (arr.shape[0] - self.resolution) // 2
             crop_x = (arr.shape[1] - self.resolution) // 2
-            arr = arr[crop_y : crop_y + self.resolution, crop_x : crop_x + self.resolution]
+            arr = arr[crop_y : crop_y + self.resolution, 
+                      crop_x : crop_x + self.resolution]
             arr = arr.astype(np.float32) / 127.5 - 1
             arr_list.append(arr)
         arr_seq = np.array(arr_list)
@@ -79,7 +89,8 @@ class VideoDataset_tif(Dataset):
         # fill in missing frames with 0s
         if arr_seq.shape[1] < self.seq_len:
             required_dim = self.seq_len - arr_seq.shape[1]
-            fill = np.zeros((3, required_dim, self.resolution, self.resolution))
+            fill = np.zeros((3, required_dim, self.resolution, 
+                             self.resolution))
             arr_seq = np.concatenate((arr_seq, fill), axis=1)
         out_dict = {}
         if self.local_classes is not None:
@@ -104,7 +115,8 @@ def preprocess_tif(arr):
     return arr
 
 def load_data(
-    *, data_dir, batch_size, image_size, class_cond=False, deterministic=False, rgb=True, seq_len=20
+    *, data_dir, batch_size, image_size, class_cond=False, 
+    deterministic=False, rgb=True, seq_len=20
 ):
     """
     For a dataset, create a generator over (videos, kwargs) pairs.
@@ -128,7 +140,8 @@ def load_data(
     classes = None
     if class_cond:
         # Use the class labels extracted from the filename using _parse_filename
-        class_labels = [_parse_filename(bf.basename(path))[3] for path in all_files]
+        class_labels = [_parse_filename(bf.basename(path))[3] 
+                        for path in all_files]
         sorted_classes = {x: i for i, x in enumerate(sorted(set(class_labels)))}
         classes = [sorted_classes[x] for x in class_labels]
     
@@ -145,11 +158,13 @@ def load_data(
         )
     if deterministic:
         loader = DataLoader(
-            dataset, batch_size=batch_size, shuffle=False, num_workers=16, drop_last=True
+            dataset, batch_size=batch_size, shuffle=False, 
+            num_workers=16, drop_last=True
         )
     else:
         loader = DataLoader(
-            dataset, batch_size=batch_size, shuffle=True, num_workers=16, drop_last=True
+            dataset, batch_size=batch_size, shuffle=True, 
+            num_workers=16, drop_last=True
         )
     while True:
         yield from loader
