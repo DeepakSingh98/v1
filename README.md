@@ -95,5 +95,19 @@ Just like for training, you can run `image_sample.py` through MPI to use multipl
 
 You can change the number of sampling steps using the `--timestep_respacing` argument. For example, `--timestep_respacing 250` uses 250 steps to sample.
 
+# Changes for V1
+I have changed the video_datasets.py file to allow the models to work with .TIF files as indvidual frames
+rather than as actual videos.
 
+## Training
 
+Flags:  
+```
+MODEL_FLAGS="--image_size 64 --num_channels 128 --num_res_blocks 3 --scale_time_dim 0";
+DIFFUSION_FLAGS="--diffusion_steps 1000 --noise_schedule linear";
+TRAIN_FLAGS="--lr 2e-5 --batch_size 8 --microbatch 2 --seq_len 98 --max_num_mask_frames 49 --uncondition_rate 0.75";
+```
+Command to run experiment:
+```
+mpirun --host ip-172-31-45-114.ec2.internal:8 -np 8  python scripts/video_train.py --data_dir data $MODEL_FLAGS $DIFFUSION_FLAGS $TRAIN_FLAGS
+```

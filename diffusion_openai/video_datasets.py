@@ -108,8 +108,6 @@ def preprocess_tif(arr):
     """
     # Normalize to [0, 1]
     arr = arr / 65535.0
-    # Resize to 1024x1024
-    arr = cv2.resize(arr, (1024, 1024))
     # Convert to float32
     arr = arr.astype(np.float32)
     return arr
